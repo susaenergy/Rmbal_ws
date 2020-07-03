@@ -1,0 +1,11 @@
+pandoc: 2.7.1
+pkgdown: 1.5.1
+pkgdown_sha: ~
+articles:
+  BlackOil: BlackOil.html
+  DryWetGas: DryWetGas.html
+  GasCondensate: GasCondensate.html
+  Introduction: Introduction.html
+  VolatileOil: VolatileOil.html
+last_built: 2020-07-03T18:33Z
+
