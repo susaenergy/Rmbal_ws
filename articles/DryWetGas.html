@@ -747,11 +747,222 @@
 <p><img src="DryWetGas_files/figure-html/unnamed-chunk-7-2.png" width="576" style="display: block; margin: auto;"></p>
 </div>
 </div>
+<div id="example-4-over-pressured-gas-reservoir-fetkovich1998" class="section level2">
+<h2 class="hasAnchor">
+<a href="#example-4-over-pressured-gas-reservoir-fetkovich1998" class="anchor"></a><code>Example 4: Over-pressured Gas Reservoir</code> <font size="2"> <span class="citation">(Fetkovich, Reese, &amp; Whitson, 1998)</span> </font>
+</h2>
+<div id="part-i-history-match-2" class="section level3">
+<h3 class="hasAnchor">
+<a href="#part-i-history-match-2" class="anchor"></a><code>Part I: History Match</code>
+</h3>
+<div class="sourceCode" id="cb13"><html><body><pre class="r"><span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">Rmbal</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">Rrelperm</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">pracma</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">minpack.lm</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">ggplot2</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">dplyr</span>)
+<span class="fu"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="no">magrittr</span>)
+
+<span class="co"># Anderson "L" gas reservoir</span>
+
+<span class="no">p_pvt</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">9507</span>, <span class="fl">9292</span>, <span class="fl">8970</span>, <span class="fl">8595</span>, <span class="fl">8332</span>, <span class="fl">8009</span>, <span class="fl">7603</span>, <span class="fl">7406</span>, <span class="fl">7002</span>, <span class="fl">6721</span>, <span class="fl">6535</span>,
+           <span class="fl">5764</span>, <span class="fl">4766</span>, <span class="fl">4295</span>, <span class="fl">3750</span>, <span class="fl">3247</span>)    <span class="co"># Psia</span>
+
+<span class="no">Bg</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">1.44</span>, <span class="fl">1.418</span>, <span class="fl">1.387</span>, <span class="fl">1.344</span>, <span class="fl">1.316</span>, <span class="fl">1.282</span>, <span class="fl">1.239</span>, <span class="fl">1.218</span>, <span class="fl">1.176</span>, <span class="fl">1.147</span>,
+        <span class="fl">1.127</span>, <span class="fl">1.048</span>, <span class="fl">0.977</span>, <span class="fl">0.928</span>, <span class="fl">0.891</span>, <span class="fl">0.854</span>) * (<span class="fl">266</span> + <span class="fl">459.67</span>) / <span class="no">p_pvt</span> /
+  ((<span class="fl">60</span> + <span class="fl">459.67</span>) / <span class="fl">14.696</span>) / <span class="fl">5.615</span>          <span class="co"># RB/SCF</span>
+
+<span class="no">Bo</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p_pvt</span>))                 <span class="co"># RB/STB</span>
+
+<span class="no">Rv</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p_pvt</span>))                 <span class="co"># STB/SCF</span>
+
+<span class="no">Rs</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">1e8</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p_pvt</span>))               <span class="co"># SCF/STB</span>
+
+<span class="no">Bw</span> <span class="kw">&lt;-</span> <span class="fl">1.055</span> * <span class="fu"><a href="https://rdrr.io/r/base/Log.html">exp</a></span>(<span class="fl">3e-6</span> * (<span class="no">p_pvt</span>[<span class="fl">1</span>] - <span class="no">p_pvt</span>))     <span class="co"># RB/STB</span>
+
+<span class="no">muo</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0.5</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p_pvt</span>))              <span class="co"># cp</span>
+
+<span class="no">muw</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0.25</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p_pvt</span>))             <span class="co"># cp</span>
+
+<span class="no">mug</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0.015</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p_pvt</span>))            <span class="co"># cp</span>
+
+<span class="no">pvt_table</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html">data.frame</a></span>(<span class="kw">p</span> <span class="kw">=</span> <span class="no">p_pvt</span>, <span class="kw">Bo</span> <span class="kw">=</span> <span class="no">Bo</span>, <span class="kw">Rs</span> <span class="kw">=</span> <span class="no">Rs</span>, <span class="kw">Rv</span> <span class="kw">=</span> <span class="no">Rv</span>, <span class="kw">Bg</span> <span class="kw">=</span> <span class="no">Bg</span>,
+                             <span class="kw">Bw</span> <span class="kw">=</span> <span class="no">Bw</span>, <span class="kw">muo</span> <span class="kw">=</span> <span class="no">muo</span>, <span class="kw">mug</span> <span class="kw">=</span> <span class="no">mug</span>, <span class="kw">muw</span> <span class="kw">=</span> <span class="no">muw</span>)
+
+<span class="no">p</span> <span class="kw">&lt;-</span> <span class="no">p_pvt</span>
+
+<span class="no">Gp</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">0</span>, <span class="fl">392.5</span>, <span class="fl">1642.2</span>, <span class="fl">3225.8</span>, <span class="fl">4260.3</span>, <span class="fl">5503.5</span>, <span class="fl">7538.1</span>, <span class="fl">8749.2</span>, <span class="fl">10509.3</span>, <span class="fl">11758.9</span>,
+        <span class="fl">12789.2</span>, <span class="fl">17262.5</span>, <span class="fl">22890.8</span>, <span class="fl">28144.6</span>, <span class="fl">32566.7</span>, <span class="fl">36819.9</span>) *  <span class="fl">1e6</span>  <span class="co"># SCF</span>
+
+<span class="no">Np</span> <span class="kw">&lt;-</span> <span class="no">Rv</span> * <span class="no">Gp</span>                                                         <span class="co"># STB</span>
+
+<span class="no">Wp</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0</span>, <span class="kw">length.out</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p</span>))
+
+<span class="no">We</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0</span>, <span class="kw">length.out</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p</span>))
+
+<span class="no">Wi</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">0</span>, <span class="kw">length.out</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p</span>))
+
+<span class="no">wf</span> <span class="kw">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html">rep</a></span>(<span class="fl">1</span>, <span class="kw">length.out</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html">length</a></span>(<span class="no">p</span>))
+
+<span class="no">mbal_optim_gas_lst</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/mbal_optim_param_gas.html">mbal_optim_param_gas</a></span>(<span class="kw">input_unit</span> <span class="kw">=</span> <span class="st">"Field"</span>, <span class="kw">output_unit</span> <span class="kw">=</span> <span class="st">"Field"</span>,
+                                          <span class="kw">unknown_param</span> <span class="kw">=</span> <span class="st">"G_M"</span>, <span class="kw">aquifer_model</span> <span class="kw">=</span> <span class="kw">NULL</span>,
+                                          <span class="kw">G</span> <span class="kw">=</span> <span class="kw">NULL</span>, <span class="kw">phi</span> <span class="kw">=</span> <span class="fl">0.22</span>, <span class="kw">swi</span> <span class="kw">=</span> <span class="fl">0.35</span>,
+                                          <span class="kw">Np</span> <span class="kw">=</span> <span class="no">Np</span>, <span class="kw">Gp</span> <span class="kw">=</span> <span class="no">Gp</span>, <span class="kw">Wp</span> <span class="kw">=</span> <span class="no">Wp</span>, <span class="kw">Wi</span> <span class="kw">=</span> <span class="no">Wi</span>,
+                                          <span class="kw">We</span> <span class="kw">=</span> <span class="no">We</span>, <span class="kw">pd</span> <span class="kw">=</span> <span class="fl">0</span>, <span class="kw">p</span> <span class="kw">=</span> <span class="no">p</span>, <span class="kw">pvt</span> <span class="kw">=</span> <span class="no">pvt_table</span>,
+                                          <span class="kw">M</span> <span class="kw">=</span> <span class="kw">NULL</span>, <span class="kw">cf</span> <span class="kw">=</span> <span class="fl">3.2e-6</span>, <span class="kw">wf</span> <span class="kw">=</span> <span class="no">wf</span>, <span class="kw">sgrw</span> <span class="kw">=</span> <span class="fl">0.0</span>)
+
+<span class="no">time_lst</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/mbal_time.html">mbal_time</a></span>(<span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="fl">0</span>:<span class="fl">15</span>), <span class="st">"month"</span>)
+
+<span class="co"># a number of plots will be automatically generated for quality check</span>
+
+<span class="no">optim_results</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/mbal_optim_gas.html">mbal_optim_gas</a></span>(<span class="no">mbal_optim_gas_lst</span>, <span class="no">time_lst</span>)</pre></body></html></div>
+<p><img src="DryWetGas_files/figure-html/unnamed-chunk-8-1.png" width="576" style="display: block; margin: auto;"><img src="DryWetGas_files/figure-html/unnamed-chunk-8-2.png" width="576" style="display: block; margin: auto;"><img src="DryWetGas_files/figure-html/unnamed-chunk-8-3.png" width="576" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb14"><html><body><pre class="r">
+<span class="fu"><a href="https://dplyr.tidyverse.org/reference/reexports.html">glimpse</a></span>(<span class="no">optim_results</span>)
+<span class="co">#&gt; List of 17</span>
+<span class="co">#&gt;  $ input_unit : chr "Field"</span>
+<span class="co">#&gt;  $ output_unit: chr "Field"</span>
+<span class="co">#&gt;  $ G          : num 7.63e+10</span>
+<span class="co">#&gt;  $ phi        : num 0.22</span>
+<span class="co">#&gt;  $ swi        : num 0.35</span>
+<span class="co">#&gt;  $ pd         : num 0</span>
+<span class="co">#&gt;  $ p          : num [1:16] 9507 9292 8970 8595 8332 ...</span>
+<span class="co">#&gt;  $ cf         : num [1:16] 3.2e-06 3.2e-06 3.2e-06 3.2e-06 3.2e-06 3.2e-06 3.2e-06 3.2e-06 3.2e-06 3.2e-06 ...</span>
+<span class="co">#&gt;  $ M          : num 1.05</span>
+<span class="co">#&gt;  $ pvt        :'data.frame': 16 obs. of  9 variables:</span>
+<span class="co">#&gt;   ..$ p  : num [1:16] 9507 9292 8970 8595 8332 ...</span>
+<span class="co">#&gt;   ..$ Bo : num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;   ..$ Rs : num [1:16] 1e+08 1e+08 1e+08 1e+08 1e+08 1e+08 1e+08 1e+08 1e+08 1e+08 ...</span>
+<span class="co">#&gt;   ..$ Rv : num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;   ..$ Bg : num [1:16] 0.000554 0.000558 0.000565 0.000571 0.000577 ...</span>
+<span class="co">#&gt;   ..$ Bw : num [1:16] 1.05 1.06 1.06 1.06 1.06 ...</span>
+<span class="co">#&gt;   ..$ muo: num [1:16] 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 ...</span>
+<span class="co">#&gt;   ..$ mug: num [1:16] 0.015 0.015 0.015 0.015 0.015 0.015 0.015 0.015 0.015 0.015 ...</span>
+<span class="co">#&gt;   ..$ muw: num [1:16] 0.25 0.25 0.25 0.25 0.25 0.25 0.25 0.25 0.25 0.25 ...</span>
+<span class="co">#&gt;  $ prod       :'data.frame': 16 obs. of  3 variables:</span>
+<span class="co">#&gt;   ..$ Np: num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;   ..$ Gp: num [1:16] 0.00 3.92e+08 1.64e+09 3.23e+09 4.26e+09 ...</span>
+<span class="co">#&gt;   ..$ Wp: num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;  $ inj        :'data.frame': 16 obs. of  1 variable:</span>
+<span class="co">#&gt;   ..$ Wi: num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;  $ We         : num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;  $ aquifer    :List of 3</span>
+<span class="co">#&gt;   ..$ input_unit : chr "Field"</span>
+<span class="co">#&gt;   ..$ output_unit: chr "Field"</span>
+<span class="co">#&gt;   ..$ We         : num [1:16] 0 0 0 0 0 0 0 0 0 0 ...</span>
+<span class="co">#&gt;   ..- attr(*, "class")= chr [1:2] "NoA" "aquifer"</span>
+<span class="co">#&gt;  $ wf         : num [1:16] 1 1 1 1 1 1 1 1 1 1 ...</span>
+<span class="co">#&gt;  $ sgrw       : num 0</span>
+<span class="co">#&gt;  $ p_est      : num [1:16] 9507 9407 9106 8678 8406 ...</span>
+<span class="co">#&gt;  - attr(*, "class")= chr [1:2] "volumetric_gas" "mbal_gas"</span></pre></body></html></div>
+<div id="part-ii-reservoir-performance-2" class="section level4">
+<h4 class="hasAnchor">
+<a href="#part-ii-reservoir-performance-2" class="anchor"></a><code>Part II: Reservoir Performance</code>
+</h4>
+<div class="sourceCode" id="cb15"><html><body><pre class="r">
+<span class="no">mbal_results</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/mbal_perform_gas.html">mbal_perform_gas</a></span>(<span class="no">optim_results</span>, <span class="no">time_lst</span>)
+
+<span class="no">mbal_results</span>
+<span class="co">#&gt;    P (psia) Eo (bbl/STB) Eg (bbl/SCF) Ew (bbl/STB) Ef (bbl/bbl) Egwf (bbl/SCF)</span>
+<span class="co">#&gt; 1      9507            0 0.000000e+00 0.0000000000    0.0000000   0.000000e+00</span>
+<span class="co">#&gt; 2      9292            0 4.155668e-06 0.0006806945    0.0006880   6.122769e-06</span>
+<span class="co">#&gt; 3      8970            0 1.154615e-05 0.0017009748    0.0017184   1.646025e-05</span>
+<span class="co">#&gt; 4      8595            0 1.791807e-05 0.0028904323    0.0029184   2.626564e-05</span>
+<span class="co">#&gt; 5      8332            0 2.367540e-05 0.0037254372    0.0037600   3.443188e-05</span>
+<span class="co">#&gt; 6      8009            0 3.144052e-05 0.0047518394    0.0047936   4.515649e-05</span>
+<span class="co">#&gt; 7      7603            0 4.201038e-05 0.0060434035    0.0060928   5.944792e-05</span>
+<span class="co">#&gt; 8      7406            0 4.748984e-05 0.0066706655    0.0067232   6.673380e-05</span>
+<span class="co">#&gt; 9      7002            0 6.024781e-05 0.0079581904    0.0080160   8.319762e-05</span>
+<span class="co">#&gt; 10     6721            0 7.014171e-05 0.0088546420    0.0089152   9.567015e-05</span>
+<span class="co">#&gt; 11     6535            0 7.670890e-05 0.0094484385    0.0095104   1.039447e-04</span>
+<span class="co">#&gt; 12     5764            0 1.109256e-04 0.0119133574    0.0119776   1.452424e-04</span>
+<span class="co">#&gt; 13     4766            0 1.956269e-04 0.0151124827    0.0151712   2.391193e-04</span>
+<span class="co">#&gt; 14     4295            0 2.360908e-04 0.0166256204    0.0166784   2.839172e-04</span>
+<span class="co">#&gt; 15     3750            0 3.147957e-04 0.0183791614    0.0184224   3.676401e-04</span>
+<span class="co">#&gt; 16     3247            0 4.076709e-04 0.0200001132    0.0200320   4.651495e-04</span>
+<span class="co">#&gt;      Et (bbl)    F (bbl) We       Igd Inwd      Ifwd Iawd Itot     RF_oil</span>
+<span class="co">#&gt; 1         0.0        0.0  0        NA   NA        NA   NA   NA 0.00000000</span>
+<span class="co">#&gt; 2    467164.3   218911.0  0 0.6787236    0 0.3212764    0    1 0.01097792</span>
+<span class="co">#&gt; 3   1255909.0   928049.1  0 0.7014563    0 0.2985437    0    1 0.02912672</span>
+<span class="co">#&gt; 4   2004055.5  1843536.5  0 0.6821865    0 0.3178135    0    1 0.04595934</span>
+<span class="co">#&gt; 5   2627135.3  2459278.5  0 0.6876010    0 0.3123990    0    1 0.05964763</span>
+<span class="co">#&gt; 6   3445417.7  3219657.0  0 0.6962569    0 0.3037431    0    1 0.07718796</span>
+<span class="co">#&gt; 7   4535846.5  4489615.2  0 0.7066754    0 0.2933246    0    1 0.09981353</span>
+<span class="co">#&gt; 8   5091755.6  5258874.8  0 0.7116310    0 0.2883690    0    1 0.11102515</span>
+<span class="co">#&gt; 9   6347937.2  6450894.1  0 0.7241530    0 0.2758470    0    1 0.13553916</span>
+<span class="co">#&gt; 10  7299584.6  7334273.9  0 0.7331619    0 0.2668381    0    1 0.15338610</span>
+<span class="co">#&gt; 11  7930925.2  8060882.8  0 0.7379783    0 0.2620217    0    1 0.16491605</span>
+<span class="co">#&gt; 12 11081923.3 11471016.6  0 0.7637271    0 0.2362729    0    1 0.21857235</span>
+<span class="co">#&gt; 13 18244680.9 17149932.0  0 0.8181145    0 0.1818855    0    1 0.31916344</span>
+<span class="co">#&gt; 14 21662737.3 22224950.1  0 0.8315481    0 0.1684519    0    1 0.35953893</span>
+<span class="co">#&gt; 15 28050756.1 28280110.1  0 0.8562605    0 0.1437395    0    1 0.42336556</span>
+<span class="co">#&gt; 16 35490676.1 35393139.9  0 0.8764299    0 0.1235701    0    1 0.48390051</span>
+<span class="co">#&gt;        RF_gas SOg  SGg  SWg SOT  SGT  SWT qo (STB/day) qg (SCF/day)</span>
+<span class="co">#&gt; 1  0.00000000   0 0.65 0.35   0 0.65 0.35            0            0</span>
+<span class="co">#&gt; 2  0.01097792   0 0.65 0.35   0 0.65 0.35            0     12904108</span>
+<span class="co">#&gt; 3  0.02912672   0 0.65 0.35   0 0.65 0.35            0     41086023</span>
+<span class="co">#&gt; 4  0.04595934   0 0.65 0.35   0 0.65 0.35            0     52063556</span>
+<span class="co">#&gt; 5  0.05964763   0 0.65 0.35   0 0.65 0.35            0     34010955</span>
+<span class="co">#&gt; 6  0.07718796   0 0.65 0.35   0 0.65 0.35            0     40872324</span>
+<span class="co">#&gt; 7  0.09981353   0 0.65 0.35   0 0.65 0.35            0     66890952</span>
+<span class="co">#&gt; 8  0.11102515   0 0.65 0.35   0 0.65 0.35            0     39816982</span>
+<span class="co">#&gt; 9  0.13553916   0 0.65 0.35   0 0.65 0.35            0     57866295</span>
+<span class="co">#&gt; 10 0.15338610   0 0.65 0.35   0 0.65 0.35            0     41082735</span>
+<span class="co">#&gt; 11 0.16491605   0 0.65 0.35   0 0.65 0.35            0     33872873</span>
+<span class="co">#&gt; 12 0.21857235   0 0.65 0.35   0 0.65 0.35            0    147067381</span>
+<span class="co">#&gt; 13 0.31916344   0 0.65 0.35   0 0.65 0.35            0    185039980</span>
+<span class="co">#&gt; 14 0.35953893   0 0.65 0.35   0 0.65 0.35            0    172727652</span>
+<span class="co">#&gt; 15 0.42336556   0 0.65 0.35   0 0.65 0.35            0    145384094</span>
+<span class="co">#&gt; 16 0.48390051   0 0.65 0.35   0 0.65 0.35            0    139831218</span>
+<span class="co">#&gt;    qw (STB/day) fo fw GOR (SCF/STB) kro/krg</span>
+<span class="co">#&gt; 1             0  0  0           Inf       0</span>
+<span class="co">#&gt; 2             0  0  0           Inf       0</span>
+<span class="co">#&gt; 3             0  0  0           Inf       0</span>
+<span class="co">#&gt; 4             0  0  0           Inf       0</span>
+<span class="co">#&gt; 5             0  0  0           Inf       0</span>
+<span class="co">#&gt; 6             0  0  0           Inf       0</span>
+<span class="co">#&gt; 7             0  0  0           Inf       0</span>
+<span class="co">#&gt; 8             0  0  0           Inf       0</span>
+<span class="co">#&gt; 9             0  0  0           Inf       0</span>
+<span class="co">#&gt; 10            0  0  0           Inf       0</span>
+<span class="co">#&gt; 11            0  0  0           Inf       0</span>
+<span class="co">#&gt; 12            0  0  0           Inf       0</span>
+<span class="co">#&gt; 13            0  0  0           Inf       0</span>
+<span class="co">#&gt; 14            0  0  0           Inf       0</span>
+<span class="co">#&gt; 15            0  0  0           Inf       0</span>
+<span class="co">#&gt; 16            0  0  0           Inf       0</span>
+
+<span class="no">p1</span> <span class="kw">&lt;-</span> <span class="no">mbal_results</span> <span class="kw">%&gt;%</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span>(<span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span>(<span class="no">`P (psia)`</span>, <span class="no">`RF_gas`</span>, <span class="kw">color</span> <span class="kw">=</span> <span class="st">"Forecast"</span>)) +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html">geom_point</a></span>(<span class="kw">size</span> <span class="kw">=</span> <span class="fl">3</span>) +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html">scale_color_manual</a></span>(<span class="kw">name</span><span class="kw">=</span><span class="st">"Data"</span>, <span class="kw">values</span><span class="kw">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"Forecast"</span> <span class="kw">=</span> <span class="st">"red"</span>)) +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">ggtitle</a></span>(<span class="st">"Gas Recovery Plot"</span>) +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_bw</a></span>()
+
+<span class="no">p1</span></pre></body></html></div>
+<p><img src="DryWetGas_files/figure-html/unnamed-chunk-9-1.png" width="576" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb16"><html><body><pre class="r">
+
+<span class="no">p2</span> <span class="kw">&lt;-</span> <span class="no">mbal_results</span>  <span class="kw">%&gt;%</span>
+  <span class="kw pkg">tidyr</span><span class="kw ns">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html">pivot_longer</a></span>(<span class="kw">cols</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"Igd"</span>, <span class="st">"Ifwd"</span>), <span class="kw">names_to</span> <span class="kw">=</span> <span class="st">"Drive Mechanism"</span>,
+                      <span class="kw">values_to</span> <span class="kw">=</span> <span class="st">"Fraction"</span>, <span class="kw">values_drop_na</span> <span class="kw">=</span> <span class="fl">TRUE</span>) <span class="kw">%&gt;%</span>
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html">ggplot</a></span>(<span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html">aes</a></span>(<span class="no">`P (psia)`</span>, <span class="no">Fraction</span>, <span class="kw">fill</span> <span class="kw">=</span> <span class="no">`Drive Mechanism`</span>)) +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_ribbon.html">geom_area</a></span>() +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html">ggtitle</a></span>(<span class="st">"Energy Plot"</span>) +
+  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html">theme_bw</a></span>()
+
+<span class="no">p2</span></pre></body></html></div>
+<p><img src="DryWetGas_files/figure-html/unnamed-chunk-9-2.png" width="576" style="display: block; margin: auto;"></p>
+</div>
+</div>
+</div>
 <div id="references" class="section level2 unnumbered">
 <h2 class="hasAnchor">
 <a href="#references" class="anchor"></a><code>References</code>
 </h2>
 <div id="refs" class="references">
+<div id="ref-Fetkovich1998">
+<p>Fetkovich, M. J., Reese, D. E., &amp; Whitson, C. H. (1998). Application of a General Material Balance for High-Pressure Gas Reservoirs (includes associated paper 51360). <em>SPE Journal</em>, <em>3</em>(01), 3–13. <a href="https://doi.org/10.2118/22921-PA">https://doi.org/10.2118/22921-PA</a></p>
+</div>
 <div id="ref-IkokuChi1984">
 <p>Ikoku, Chi, U. (1984). <em>Natural Gas Reservoir Engineering</em> (p. 503). John Wiley &amp; Sons, Ltd.</p>
 </div>
